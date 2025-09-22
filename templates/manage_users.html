@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>👥 Manage Users</h2>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Balance</th>
+            <th>Role</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+            <tr>
+                <td>
+                    {{ user.username }}
+                    {% if user.is_admin %}
+                        <span class="badge bg-danger">Admin</span>
+                    {% endif %}
+                </td>
+                <td>{{ user.balance }}</td>
+                <td>{{ 'Admin' if user.is_admin else 'User' }}</td>
+                <td>
+                    {% if not user.is_admin %}
+                        <a href="{{ url_for('promote_user', user_id=user.id) }}" class="btn btn-success btn-sm">Promote</a>
+                    {% else %}
+                        {% if not session.user_id == user.id %}
+                            <a href="{{ url_for('demote_user', user_id=user.id) }}" class="btn btn-warning btn-sm">Demote</a>
+                        {% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

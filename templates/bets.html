@@ -1,0 +1,74 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>{{ title }}</h2>
+
+{% if title == "All Bets" %}
+<!-- Filter Form -->
+<form method="GET" class="row g-3 mb-4">
+    <div class="col-auto">
+        <label class="form-label">From:</label>
+        <input type="date" name="from" class="form-control" value="{{ date_from }}">
+    </div>
+    <div class="col-auto">
+        <label class="form-label">To:</label>
+        <input type="date" name="to" class="form-control" value="{{ date_to }}">
+    </div>
+    <div class="col-auto" style="margin-top: 30px;">
+        <button type="submit" class="btn btn-primary">Apply</button>
+        <a href="{{ url_for('all_bets') }}" class="btn btn-secondary">Clear</a>
+    </div>
+    <div class="col-auto" style="margin-top: 30px;">
+        <a href="{{ url_for('all_bets', from=datetime.now().strftime('%Y-%m-%d'), to=datetime.now().strftime('%Y-%m-%d')) }}" class="btn btn-info">Today</a>
+        <a href="{{ url_for('all_bets', from=(datetime.now()-timedelta(days=7)).strftime('%Y-%m-%d'), to=datetime.now().strftime('%Y-%m-%d')) }}" class="btn btn-warning">Last 7 Days</a>
+    </div>
+</form>
+{% endif %}
+
+{% if bets %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Event</th>
+            <th>Outcome</th>
+            <th>Odds</th>
+            <th>Amount</th>
+            <th>Status</th>
+            {% if title == "All Bets" %}
+                <th>Resolved At</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for bet in bets %}
+        <tr>
+            <td>
+                {{ bet.username }}
+                {% if bet.is_admin %}
+                    <span class="badge bg-danger">Admin</span>
+                {% endif %}
+            </td>
+            <td>{{ bet.title }}</td>
+            <td>{{ bet.outcome_name }}</td>
+            <td>{{ bet.odds }}</td>
+            <td>{{ bet.amount }}</td>
+            <td>
+                {% if bet.status == "pending" %}
+                    <span class="badge bg-secondary">Pending</span>
+                {% elif bet.status == "won" %}
+                    <span class="badge bg-success">Won</span>
+                {% elif bet.status == "lost" %}
+                    <span class="badge bg-danger">Lost</span>
+                {% endif %}
+            </td>
+            {% if title == "All Bets" %}
+                <td>{{ bet.resolved_at }}</td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No bets found.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<!-- Fun Rules of Betting -->
+<div class="card mb-4 border-primary shadow-sm">
+    <div class="card-header bg-primary text-white fw-bold">
+        📜 Rules of Betting – Read Before You Wager!
+    </div>
+    <div class="card-body">
+        <ol>
+            <li><strong>It's All for Fun 🎉</strong> – Just for friends and entertainment. No real money involved.</li>
+            <li><strong>Start With 1000 Credits 💰</strong> – Use wisely. Once it’s gone, ask an admin (politely!) for a top-up.</li>
+            <li><strong>Check the Odds 🎲</strong> – Higher odds = bigger payouts, riskier bets!</li>
+            <li><strong>Unlimited Outcomes 🔄</strong> – Events can have more than 2 possible results. Choose wisely.</li>
+            <li><strong>Bet Responsibly 🎯</strong> – Don’t put all credits on one wild hunch… unless you like drama.</li>
+            <li><strong>Pending Bets ⏳</strong> – Bets stay pending until an admin resolves the event.</li>
+            <li><strong>Winnings 🚀</strong> – Win = stake × odds added to your balance.</li>
+            <li><strong>Respect the Admin 👑</strong> – Admin’s word is final. Snacks may increase luck 😉.</li>
+            <li><strong>Have Fun! 🎊</strong> – Bet smart, laugh loud, keep it friendly!</li>
+        </ol>
+        <p class="text-muted"><em>Disclaimer: All betting here is fictional – no actual money changes hands.</em></p>
+    </div>
+</div>
+
+<h1 class="mb-2">
+    🏆 Who's Gonna Win? <small class="text-muted">Place your bets now!</small>
+</h1>
+<p class="fs-5 fst-italic text-primary slogan">{{ slogan }}</p>
+
+<h2 class="mt-4">Active Events</h2>
+{% if events_data %}
+    {% for e in events_data %}
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5>{{ e.event.title }}</h5>
+          <form method="POST" action="{{ url_for('place_bet', event_id=e.event.id) }}" class="row g-2">
+              <div class="col-md-4">
+                  <select name="outcome_id" class="form-select">
+                      {% for o in e.outcomes %}
+                          <option value="{{o.id}}">{{o.outcome_name}} @ {{o.odds}}</option>
+                      {% endfor %}
+                  </select>
+              </div>
+              <div class="col-md-3">
+                  <input type="number" name="amount" class="form-control" placeholder="Amount" min="1" required>
+              </div>
+              <div class="col-md-3">
+                  <button type="submit" class="btn btn-primary">Place Bet</button>
+              </div>
+          </form>
+
+          {% if session.is_admin %}
+          <form method="POST" action="{{ url_for('admin_resolve', event_id=e.event.id) }}" class="mt-2">
+              <select name="winner_outcome_id" class="form-select">
+                  {% for o in e.outcomes %}
+                      <option value="{{o.id}}">{{o.outcome_name}}</option>
+                  {% endfor %}
+              </select>
+              <button class="btn btn-danger btn-sm mt-1">Resolve Event</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+{% else %}
+<p>No active predictions</p>
+{% endif %}
+{% endblock %}

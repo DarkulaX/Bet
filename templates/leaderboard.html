@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>🏅 Leaderboard</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Balance</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in leaderboard %}
+        <tr>
+            <td>
+                {{ user.username }}
+                {% if user.is_admin %}
+                    <span class="badge bg-danger">Admin</span>
+                {% endif %}
+            </td>
+            <td>{{ user.balance }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

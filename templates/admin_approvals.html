@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>🛂 Pending Event Approvals</h2>
+{% if events_data %}
+    {% for e in events_data %}
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5>{{ e.event.title }}</h5>
+          <ul>
+          {% for o in e.outcomes %}
+            <li>{{o.outcome_name}} @ {{o.odds}}</li>
+          {% endfor %}
+          </ul>
+          <a href="{{ url_for('approve_event', event_id=e.event.id) }}" class="btn btn-success btn-sm">Approve</a>
+          <a href="{{ url_for('delete_event', event_id=e.event.id) }}" class="btn btn-danger btn-sm">Delete</a>
+        </div>
+      </div>
+    {% endfor %}
+{% else %}
+<p>No events pending approval</p>
+{% endif %}
+{% endblock %}
