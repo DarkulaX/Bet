@@ -362,6 +362,24 @@ def demote_user(user_id):
     flash("User demoted to normal user!")
     return redirect(url_for("manage_users", target_id=user_id))
 
+@app.route("/delete_user/<int:user_id>")
+def delete_user(user_id):
+    if not session.get("is_admin"):
+        flash("Admin access only!")
+        return redirect(url_for("index"))
+
+    if user_id == session["user_id"]:
+        flash("You cannot delete your own account while logged in.")
+        return redirect(url_for("manage_users"))
+
+    with get_db() as db:
+        db.execute("DELETE FROM bets WHERE user_id=?", (user_id,))
+        db.execute("DELETE FROM users WHERE id=?", (user_id,))
+        db.commit()
+
+    flash(f"User ID {user_id} has been deleted.")
+    return redirect(url_for("manage_users"))
+
 @app.route("/my_bets")
 def my_bets():
     if "user_id" not in session:

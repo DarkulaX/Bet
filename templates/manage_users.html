@@ -49,6 +49,15 @@
                                class="form-control form-control-sm d-inline-block w-auto">
                         <button type="submit" class="btn btn-info btn-sm">Top-up</button>
                     </form>
+
+                    <!-- Delete User Button -->
+                    {% if not session.user_id == user.id %}
+                        <a href="{{ url_for('delete_user', user_id=user.id) }}"
+                           class="btn btn-danger btn-sm ms-2"
+                           onclick="return confirm('Are you sure you want to delete the user: {{ user.username }}? This will also remove all bets placed by them.')">
+                           Delete
+                        </a>
+                    {% endif %}
                 </td>
             </tr>
         {% endfor %}
