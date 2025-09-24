@@ -269,27 +269,50 @@ def admin_resolve(event_id):
     if not session.get("is_admin"):
         flash("Admin access only!")
         return redirect(url_for("index"))
+
     winner_outcome_id = int(request.form["winner_outcome_id"])
     resolved_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     with get_db() as db:
-        db.execute("UPDATE events SET winner_outcome_id=?, resolved_at=? WHERE id=?", 
+        # Mark event as resolved
+        db.execute("UPDATE events SET winner_outcome_id=?, resolved_at=? WHERE id=?",
                    (winner_outcome_id, resolved_time, event_id))
-        winner = db.execute("SELECT * FROM event_outcomes WHERE id=?", (winner_outcome_id,)).fetchone()
+
+        # Fetch all bets for the event
         bets = db.execute("SELECT * FROM bets WHERE event_id=?", (event_id,)).fetchall()
-        for b in bets:
-            if b["outcome_id"] == winner_outcome_id:
-                payout = int(b["amount"] * winner["odds"])
-                db.execute("UPDATE bets SET status='won' WHERE id=?", (b["id"],))
-                db.execute("UPDATE users SET balance = balance + ? WHERE id=?", (payout, b["user_id"]))
-            else:
-                db.execute("UPDATE bets SET status='lost' WHERE id=?", (b["id"],))
+        winner = db.execute("SELECT * FROM event_outcomes WHERE id=?", (winner_outcome_id,)).fetchone()
+
+        # Total pot = sum of all stakes
+        total_pot = sum(b["amount"] for b in bets)
+
+        # Find winning bets
+        winning_bets = [b for b in bets if b["outcome_id"] == winner_outcome_id]
+
+        if winning_bets:
+            # Calculate total weight (stake × odds for each winning bet)
+            total_weight = sum(b["amount"] * winner["odds"] for b in winning_bets)
+
+            for b in bets:
+                if b["outcome_id"] == winner_outcome_id:
+                    # Weight for this bet
+                    bet_weight = b["amount"] * winner["odds"]
+                    # Share of pot
+                    payout = (bet_weight / total_weight) * total_pot
+                    db.execute("UPDATE bets SET status='won' WHERE id=?", (b["id"],))
+                    db.execute("UPDATE users SET balance = balance + ? WHERE id=?", (int(payout), b["user_id"]))
+                else:
+                    db.execute("UPDATE bets SET status='lost' WHERE id=?", (b["id"],))
+        else:
+            # No winners — credits vanish (or could refund)
+            pass
+
         db.commit()
 
-        # ⭐ Update admin's balance in session if they have bets on this event
-        updated_user = db.execute("SELECT balance FROM users WHERE id=?", (session["user_id"],)).fetchone()
-        session["balance"] = updated_user["balance"]
+        # Update logged-in admin balance in session
+        updated_balance = db.execute("SELECT balance FROM users WHERE id=?", (session["user_id"],)).fetchone()
+        session["balance"] = updated_balance["balance"]
 
-    flash("Event resolved!")
+    flash("Event resolved and credits redistributed to winners!")
     return redirect(url_for("index"))
 
 @app.route("/leaderboard")
