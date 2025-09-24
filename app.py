@@ -77,11 +77,31 @@ else:
 @app.route("/")
 def index():
     db = get_db()
-    events = db.execute("SELECT * FROM events WHERE winner_outcome_id IS NULL AND approved=1").fetchall()
+    events = db.execute("""
+        SELECT * FROM events 
+        WHERE winner_outcome_id IS NULL AND approved=1
+    """).fetchall()
+
     events_data = []
     for event in events:
-        outcomes = db.execute("SELECT * FROM event_outcomes WHERE event_id=?", (event["id"],)).fetchall()
-        events_data.append({"event": event, "outcomes": outcomes})
+        outcomes = db.execute(
+            "SELECT * FROM event_outcomes WHERE event_id=?", (event["id"],)
+        ).fetchall()
+
+        # Get active bets for this event
+        bets = db.execute("""
+            SELECT b.*, u.username, u.is_admin, o.outcome_name
+            FROM bets b
+            JOIN users u ON b.user_id = u.id
+            JOIN event_outcomes o ON b.outcome_id = o.id
+            WHERE b.event_id=? AND b.status='pending'
+        """, (event["id"],)).fetchall()
+
+        events_data.append({
+            "event": event,
+            "outcomes": outcomes,
+            "bets": bets
+        })
 
     slogans = [
         "Bet smart. Win big. Brag always! 😎",
@@ -107,8 +127,17 @@ def register():
         try:
             with get_db() as db:
                 db.execute("INSERT INTO users(username,password) VALUES (?,?)", (username, password))
-            flash("Registered! Please log in.")
-            return redirect(url_for("login"))
+                # Fetch the newly created user (includes balance)
+                user = db.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+            
+            # Auto-login: set session vars
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
+            session["is_admin"] = bool(user["is_admin"])
+            session["balance"] = user["balance"]  # ⭐ store balance for navbar
+
+            flash(f"Welcome {session['username']}! You have been registered and logged in.")
+            return redirect(url_for("index"))
         except:
             flash("Username already taken.")
     return render_template("register.html")
@@ -121,6 +150,7 @@ def login():
             session["user_id"] = user["id"]
             session["username"] = user["username"]
             session["is_admin"] = bool(user["is_admin"])
+            session["balance"] = user["balance"]  # ⭐
             flash(f"Welcome {session['username']}!")
             return redirect(url_for("index"))
         flash("Invalid credentials")
@@ -148,6 +178,11 @@ def place_bet(event_id):
                (session["user_id"], event_id, outcome_id, amount))
     db.execute("UPDATE users SET balance = balance - ? WHERE id=?", (amount, session["user_id"]))
     db.commit()
+    
+    # ⭐ Update session balance
+    updated_user = db.execute("SELECT balance FROM users WHERE id=?", (session["user_id"],)).fetchone()
+    session["balance"] = updated_user["balance"]
+
     flash("Bet placed!")
     return redirect(url_for("index"))
 
@@ -249,12 +284,26 @@ def admin_resolve(event_id):
             else:
                 db.execute("UPDATE bets SET status='lost' WHERE id=?", (b["id"],))
         db.commit()
+
+        # ⭐ Update admin's balance in session if they have bets on this event
+        updated_user = db.execute("SELECT balance FROM users WHERE id=?", (session["user_id"],)).fetchone()
+        session["balance"] = updated_user["balance"]
+
     flash("Event resolved!")
     return redirect(url_for("index"))
 
 @app.route("/leaderboard")
 def leaderboard():
-    users = get_db().execute("SELECT username, balance, is_admin FROM users ORDER BY balance DESC").fetchall()
+    db = get_db()
+    # Count distinct events where user has won bets
+    users = db.execute("""
+        SELECT u.username, u.balance, u.is_admin,
+               COUNT(DISTINCT b.event_id) AS events_won
+        FROM users u
+        LEFT JOIN bets b ON u.id = b.user_id AND b.status = 'won'
+        GROUP BY u.id
+        ORDER BY u.balance DESC
+    """).fetchall()
     return render_template("leaderboard.html", leaderboard=users)
 
 @app.route("/manage_users")
@@ -274,7 +323,7 @@ def promote_user(user_id):
         db.execute("UPDATE users SET is_admin=1 WHERE id=?", (user_id,))
         db.commit()
     flash("User promoted to admin!")
-    return redirect(url_for("manage_users"))
+    return redirect(url_for("manage_users", target_id=user_id))
 
 @app.route("/demote/<int:user_id>")
 def demote_user(user_id):
@@ -288,7 +337,7 @@ def demote_user(user_id):
         db.execute("UPDATE users SET is_admin=0 WHERE id=?", (user_id,))
         db.commit()
     flash("User demoted to normal user!")
-    return redirect(url_for("manage_users"))
+    return redirect(url_for("manage_users", target_id=user_id))
 
 @app.route("/my_bets")
 def my_bets():
@@ -306,6 +355,27 @@ def my_bets():
         ORDER BY b.id DESC
     """, (session["user_id"],)).fetchall()
     return render_template("bets.html", bets=bets, title="My Bets")
+
+@app.route("/topup/<int:user_id>", methods=["POST"])
+def topup(user_id):
+    if not session.get("is_admin"):
+        flash("Admin access only!")
+        return redirect(url_for("index"))
+    amount = request.form.get("amount")
+    if not amount or not amount.isdigit():
+        flash("Invalid amount entered.")
+        return redirect(url_for("manage_users"))
+    amount = int(amount)
+    with get_db() as db:
+        db.execute("UPDATE users SET balance = balance + ? WHERE id=?", (amount, user_id))
+        db.commit()
+        # ⭐ If admin tops up themselves, update their navbar
+        if user_id == session["user_id"]:
+            updated_user = db.execute("SELECT balance FROM users WHERE id=?", (session["user_id"],)).fetchone()
+            session["balance"] = updated_user["balance"]
+
+    flash(f"Top-up successful! Added {amount} credits.")
+    return redirect(url_for("manage_users", target_id=user_id))
 
 @app.route("/all_bets")
 def all_bets():

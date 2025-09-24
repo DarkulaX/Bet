@@ -6,6 +6,7 @@
         <tr>
             <th>Username</th>
             <th>Balance</th>
+            <th>Events Won</th>
         </tr>
     </thead>
     <tbody>
@@ -18,6 +19,7 @@
                 {% endif %}
             </td>
             <td>{{ user.balance }}</td>
+            <td>{{ user.events_won }}</td>
         </tr>
         {% endfor %}
     </tbody>

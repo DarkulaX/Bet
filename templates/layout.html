@@ -79,7 +79,7 @@
     {% if session.username %}
         <a href="{{ url_for('my_bets') }}" class="btn btn-outline-light me-2">My Bets</a>
         <span class="navbar-text text-white me-3">
-            {{ session.username }}
+            {{ session.username }} (💰 {{ session.balance }} credits)
             {% if session.is_admin %}
                 <span class="badge bg-danger">Admin</span>
             {% endif %}

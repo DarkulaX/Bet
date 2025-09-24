@@ -1,18 +1,31 @@
 {% extends "layout.html" %}
 {% block content %}
 <h2>👥 Manage Users</h2>
+
+<style>
+    .highlight-glow {
+        animation: glowEffect 2s ease-in-out;
+    }
+    @keyframes glowEffect {
+        0% { background-color: #d4edda; }
+        50% { background-color: #c3e6cb; }
+        100% { background-color: transparent; }
+    }
+</style>
+
 <table class="table table-bordered">
-    <thead>
+    <thead class="table-dark">
         <tr>
             <th>Username</th>
             <th>Balance</th>
             <th>Role</th>
-            <th>Action</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
         {% for user in users %}
-            <tr>
+            {% set is_target = request.args.get("target_id") and request.args.get("target_id")|int == user.id %}
+            <tr class="{% if is_target %}highlight-glow{% endif %}">
                 <td>
                     {{ user.username }}
                     {% if user.is_admin %}
@@ -29,6 +42,13 @@
                             <a href="{{ url_for('demote_user', user_id=user.id) }}" class="btn btn-warning btn-sm">Demote</a>
                         {% endif %}
                     {% endif %}
+
+                    <!-- Top-up Credits Form -->
+                    <form method="POST" action="{{ url_for('topup', user_id=user.id) }}" class="d-inline ms-2">
+                        <input type="number" name="amount" placeholder="Credits" min="1" required
+                               class="form-control form-control-sm d-inline-block w-auto">
+                        <button type="submit" class="btn btn-info btn-sm">Top-up</button>
+                    </form>
                 </td>
             </tr>
         {% endfor %}
