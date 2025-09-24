@@ -37,7 +37,7 @@
               <div class="col-md-4">
                   <select name="outcome_id" class="form-select">
                       {% for o in e.outcomes %}
-                          <option value="{{o.id}}">{{o.outcome_name}} @ {{o.odds}}</option>
+                          <option value="{{o.id}}">{{o.outcome_name}} @ {{o.odds}} % chance</option>
                       {% endfor %}
                   </select>
               </div>
