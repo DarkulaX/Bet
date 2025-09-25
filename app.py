@@ -77,24 +77,23 @@ else:
 @app.route("/")
 def index():
     db = get_db()
+
+    # ✅ Approved & unresolved events (bets allowed)
     events = db.execute("""
-        SELECT * FROM events 
-        WHERE winner_outcome_id IS NULL AND approved=1
+        SELECT * FROM events
+        WHERE winner_outcome_id IS NULL AND approved = 1
     """).fetchall()
 
     events_data = []
     for event in events:
-        outcomes = db.execute(
-            "SELECT * FROM event_outcomes WHERE event_id=?", (event["id"],)
-        ).fetchall()
+        outcomes = db.execute("SELECT * FROM event_outcomes WHERE event_id=?", (event["id"],)).fetchall()
 
-        # Get active bets for this event
         bets = db.execute("""
             SELECT b.*, u.username, u.is_admin, o.outcome_name
             FROM bets b
             JOIN users u ON b.user_id = u.id
             JOIN event_outcomes o ON b.outcome_id = o.id
-            WHERE b.event_id=? AND b.status='pending'
+            WHERE b.event_id = ? AND b.status = 'pending'
         """, (event["id"],)).fetchall()
 
         events_data.append({
@@ -103,6 +102,23 @@ def index():
             "bets": bets
         })
 
+    # ⏳ Pending & unresolved events (bets not yet allowed)
+    pending_events = db.execute("""
+        SELECT e.*, u.username AS suggested_by
+        FROM events e
+        LEFT JOIN users u ON e.creator_id = u.id
+        WHERE e.winner_outcome_id IS NULL AND e.approved = 0
+    """).fetchall()
+
+    pending_events_data = []
+    for event in pending_events:
+        outcomes = db.execute("SELECT * FROM event_outcomes WHERE event_id=?", (event["id"],)).fetchall()
+        pending_events_data.append({
+            "event": event,
+            "outcomes": outcomes
+        })
+
+    # 🎯 Random fun slogan
     slogans = [
         "Bet smart. Win big. Brag always! 😎",
         "Fortune favors the bold… and the silly. 😂",
@@ -117,7 +133,12 @@ def index():
     ]
     slogan = random.choice(slogans)
 
-    return render_template("index.html", events_data=events_data, slogan=slogan)
+    return render_template(
+        "index.html",
+        events_data=events_data,
+        pending_events_data=pending_events_data,
+        slogan=slogan
+    )
 
 @app.route("/register", methods=["GET", "POST"])
 def register():

@@ -70,11 +70,12 @@
     {% endif %}
 
     {% if session.is_admin %}
-      <a href="{{ url_for('admin_add') }}" class="btn btn-warning me-2">Admin Add Event</a>
-      <a href="{{ url_for('admin_approvals') }}" class="btn btn-info me-2">Approve Events</a>
-      <a href="{{ url_for('manage_users') }}" class="btn btn-secondary me-2">Manage Users</a>
-      <a href="{{ url_for('all_bets') }}" class="btn btn-outline-light me-2">All Bets</a>
-    {% endif %}
+    <a href="{{ url_for('admin_add') }}" class="btn btn-warning me-2">Admin Add Event</a>
+    <a href="{{ url_for('admin_approvals') }}" class="btn btn-info me-2">Approve Events</a>
+    <a href="{{ url_for('manage_users') }}" class="btn btn-secondary me-2">Manage Users</a>
+    <a href="{{ url_for('activity_log') }}" class="btn btn-dark me-2">Activity Log</a>
+    <a href="{{ url_for('all_bets') }}" class="btn btn-outline-light me-2">All Bets</a>
+{% endif %}
 
     {% if session.username %}
         <a href="{{ url_for('my_bets') }}" class="btn btn-outline-light me-2">My Bets</a>
