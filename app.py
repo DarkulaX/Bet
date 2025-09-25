@@ -87,7 +87,6 @@ def index():
     events_data = []
     for event in events:
         outcomes = db.execute("SELECT * FROM event_outcomes WHERE event_id=?", (event["id"],)).fetchall()
-
         bets = db.execute("""
             SELECT b.*, u.username, u.is_admin, o.outcome_name
             FROM bets b
@@ -104,10 +103,8 @@ def index():
 
     # ⏳ Pending & unresolved events (bets not yet allowed)
     pending_events = db.execute("""
-        SELECT e.*, u.username AS suggested_by
-        FROM events e
-        LEFT JOIN users u ON e.creator_id = u.id
-        WHERE e.winner_outcome_id IS NULL AND e.approved = 0
+        SELECT * FROM events
+        WHERE winner_outcome_id IS NULL AND approved = 0
     """).fetchall()
 
     pending_events_data = []
