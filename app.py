@@ -468,7 +468,7 @@ def all_bets():
         JOIN events e ON b.event_id = e.id
         JOIN event_outcomes o ON b.outcome_id = o.id
         JOIN users u ON b.user_id = u.id
-        WHERE e.resolved_at IS NOT NULL
+        WHERE 1=1
     """
     params = []
 
@@ -479,17 +479,20 @@ def all_bets():
         query += " AND date(e.resolved_at) <= date(?)"
         params.append(date_to)
 
-    query += " ORDER BY datetime(e.resolved_at) DESC, b.id DESC"
+    query += " ORDER BY 
+        CASE WHEN e.resolved_at IS NULL THEN 1 ELSE 0 END,
+        datetime(e.resolved_at) DESC,
+        b.id DESC"
 
     bets = get_db().execute(query, params).fetchall()
 
     return render_template(
-        "bets.html", 
-        bets=bets, 
-        title="All Bets", 
-        date_from=date_from or "", 
-        date_to=date_to or "", 
-        datetime=datetime, 
+        "bets.html",
+        bets=bets,
+        title="All Bets",
+        date_from=date_from or "",
+        date_to=date_to or "",
+        datetime=datetime,
         timedelta=timedelta
     )
 
