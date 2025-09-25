@@ -225,6 +225,22 @@ def admin_add():
         return redirect(url_for("index"))
     return render_template("admin_add.html")
 
+@app.route("/activity_log")
+def activity_log():
+    if not session.get("is_admin"):
+        flash("Admin access only!")
+        return redirect(url_for("index"))
+
+    logs = []
+    try:
+        logs = get_db().execute(
+            "SELECT * FROM activity_log ORDER BY id DESC LIMIT 100"
+        ).fetchall()
+    except Exception:
+        flash("Activity log table not found or empty.")
+
+    return render_template("activity_log.html", logs=logs)
+
 @app.route("/submit_event", methods=["GET", "POST"])
 def submit_event():
     if "user_id" not in session:
