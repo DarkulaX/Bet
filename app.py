@@ -56,6 +56,12 @@ def init_db():
             FOREIGN KEY(event_id) REFERENCES events(id),
             FOREIGN KEY(outcome_id) REFERENCES event_outcomes(id)
         );
+
+        CREATE TABLE IF NOT EXISTS confessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            content TEXT NOT NULL,
+            timestamp TEXT NOT NULL
+        );
         """)
 
     with get_db() as db:
@@ -86,7 +92,11 @@ def index():
 
     events_data = []
     for event in events:
-        outcomes = db.execute("SELECT * FROM event_outcomes WHERE event_id=?", (event["id"],)).fetchall()
+        outcomes = db.execute(
+            "SELECT * FROM event_outcomes WHERE event_id=?", 
+            (event["id"],)
+        ).fetchall()
+
         bets = db.execute("""
             SELECT b.*, u.username, u.is_admin, o.outcome_name
             FROM bets b
@@ -101,7 +111,7 @@ def index():
             "bets": bets
         })
 
-    # ⏳ Pending & unresolved events (bets not yet allowed)
+    # ⏳ Pending & unresolved events (bets NOT allowed yet)
     pending_events = db.execute("""
         SELECT * FROM events
         WHERE winner_outcome_id IS NULL AND approved = 0
@@ -109,11 +119,21 @@ def index():
 
     pending_events_data = []
     for event in pending_events:
-        outcomes = db.execute("SELECT * FROM event_outcomes WHERE event_id=?", (event["id"],)).fetchall()
+        outcomes = db.execute(
+            "SELECT * FROM event_outcomes WHERE event_id=?", 
+            (event["id"],)
+        ).fetchall()
         pending_events_data.append({
             "event": event,
             "outcomes": outcomes
         })
+
+    # 🙊 Anonymous Confessions (latest first)
+    confessions = db.execute("""
+        SELECT * FROM confessions
+        ORDER BY id DESC
+        LIMIT 20
+    """).fetchall()
 
     # 🎯 Random fun slogan
     slogans = [
@@ -134,8 +154,26 @@ def index():
         "index.html",
         events_data=events_data,
         pending_events_data=pending_events_data,
+        confessions=confessions,
         slogan=slogan
     )
+
+@app.route("/add_confession", methods=["POST"])
+def add_confession():
+    content = request.form.get("content", "").strip()
+    if not content:
+        flash("Confession cannot be empty!")
+        return redirect(url_for("index"))
+
+    with get_db() as db:
+        db.execute(
+            "INSERT INTO confessions (content, timestamp) VALUES (?, ?)",
+            (content, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        )
+        db.commit()
+
+    flash("Your confession has been added anonymously.")
+    return redirect(url_for("index"))
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
