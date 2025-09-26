@@ -84,19 +84,14 @@ else:
 def index():
     db = get_db()
 
-    # ✅ Approved & unresolved events (bets allowed)
+    # Approved events
     events = db.execute("""
         SELECT * FROM events
         WHERE winner_outcome_id IS NULL AND approved = 1
     """).fetchall()
-
     events_data = []
     for event in events:
-        outcomes = db.execute(
-            "SELECT * FROM event_outcomes WHERE event_id=?", 
-            (event["id"],)
-        ).fetchall()
-
+        outcomes = db.execute("SELECT * FROM event_outcomes WHERE event_id=?", (event["id"],)).fetchall()
         bets = db.execute("""
             SELECT b.*, u.username, u.is_admin, o.outcome_name
             FROM bets b
@@ -104,38 +99,24 @@ def index():
             JOIN event_outcomes o ON b.outcome_id = o.id
             WHERE b.event_id = ? AND b.status = 'pending'
         """, (event["id"],)).fetchall()
+        events_data.append({"event": event, "outcomes": outcomes, "bets": bets})
 
-        events_data.append({
-            "event": event,
-            "outcomes": outcomes,
-            "bets": bets
-        })
-
-    # ⏳ Pending & unresolved events (bets NOT allowed yet)
+    # Pending events
     pending_events = db.execute("""
         SELECT * FROM events
         WHERE winner_outcome_id IS NULL AND approved = 0
     """).fetchall()
-
     pending_events_data = []
     for event in pending_events:
-        outcomes = db.execute(
-            "SELECT * FROM event_outcomes WHERE event_id=?", 
-            (event["id"],)
-        ).fetchall()
-        pending_events_data.append({
-            "event": event,
-            "outcomes": outcomes
-        })
+        outcomes = db.execute("SELECT * FROM event_outcomes WHERE event_id=?", (event["id"],)).fetchall()
+        pending_events_data.append({"event": event, "outcomes": outcomes})
 
-    # 🙊 Anonymous Confessions (latest first)
+    # Confessions
     confessions = db.execute("""
-        SELECT * FROM confessions
-        ORDER BY id DESC
-        LIMIT 20
+        SELECT * FROM confessions ORDER BY id DESC LIMIT 20
     """).fetchall()
 
-    # 🎯 Random fun slogan
+    # Random slogan
     slogans = [
         "Bet smart. Win big. Brag always! 😎",
         "Fortune favors the bold… and the silly. 😂",
@@ -158,22 +139,31 @@ def index():
         slogan=slogan
     )
 
-@app.route("/add_confession", methods=["POST"])
+@app.route("/add_confession", methods=["GET", "POST"])
 def add_confession():
-    content = request.form.get("content", "").strip()
-    if not content:
-        flash("Confession cannot be empty!")
-        return redirect(url_for("index"))
+    # Only logged-in users can add
+    if "user_id" not in session:
+        flash("You must be logged in to post a confession.")
+        return redirect(url_for("login"))
 
-    with get_db() as db:
-        db.execute(
-            "INSERT INTO confessions (content, timestamp) VALUES (?, ?)",
-            (content, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        )
-        db.commit()
+    if request.method == "POST":
+        content = request.form.get("content", "").strip()
+        if not content:
+            flash("Confession cannot be empty!")
+            return redirect(url_for("add_confession"))
 
-    flash("Your confession has been added anonymously.")
-    return redirect(url_for("index"))
+        with get_db() as db:
+            db.execute(
+                "INSERT INTO confessions (content, timestamp) VALUES (?, ?)",
+                (content, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            )
+            db.commit()
+
+        flash("Your confession has been added anonymously.")
+        return redirect(url_for("index"))  # Back to homepage
+
+    # GET request → show form
+    return render_template("add_confession.html")
 
 @app.route("/register", methods=["GET", "POST"])
 def register():

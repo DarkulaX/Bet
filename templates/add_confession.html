@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>🙊 Submit Anonymous Confession</h2>
+<form method="POST" action="{{ url_for('add_confession') }}" class="w-50">
+    <textarea name="content" class="form-control mb-3" rows="5" placeholder="Write your confession..." required></textarea>
+    <button type="submit" class="btn btn-warning">Submit</button>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

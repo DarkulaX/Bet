@@ -110,21 +110,23 @@
   </div>
 
   <!-- RIGHT COLUMN: Confessions -->
-  <div class="col-md-4">
-    <h2>🙊 Anonymous Confessions</h2>
-    <form method="POST" action="{{ url_for('add_confession') }}" class="mb-3">
-        <textarea name="content" class="form-control" rows="3" placeholder="Write your confession here..." required></textarea>
-        <button type="submit" class="btn btn-warning mt-2">Submit Anonymously</button>
-    </form>
+<div class="col-md-4">
+  <h2>🙊 Anonymous Confessions</h2>
 
-    <div class="list-group">
-        {% for c in confessions %}
-        <div class="list-group-item">
-            <p class="mb-1">{{ c.content }}</p>
-            <small class="text-muted">{{ c.timestamp }}</small>
-        </div>
-        {% endfor %}
-    </div>
+  {% if session.user_id %}
+    <a href="{{ url_for('add_confession') }}" class="btn btn-warning mb-3">Submit New Confession</a>
+  {% else %}
+    <p class="text-muted">Log in to submit a confession.</p>
+  {% endif %}
+
+  <div class="list-group">
+      {% for c in confessions %}
+      <div class="list-group-item">
+          <p class="mb-1">{{ c.content }}</p>
+          <small class="text-muted">{{ c.timestamp }}</small>
+      </div>
+      {% endfor %}
   </div>
+</div>
 </div>
 {% endblock %}
