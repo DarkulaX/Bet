@@ -114,8 +114,8 @@
     <p>No active events</p>
     {% endif %}
 
-    <!-- Pending Submissions -->
-    <h2 class="mt-4">⏳ Pending Submissions</h2>
+    <!-- Pending Events -->
+    <h2 class="mt-4">⏳ Pending Events</h2>
     {% if pending_events_data %}
         {% for e in pending_events_data %}
           <div class="card mb-3 border-warning">
@@ -142,6 +142,8 @@
   <!-- RIGHT COLUMN: Confessions -->
   <div class="col-md-4">
     <h2>🙊 Anonymous Confessions</h2>
+      <p class="text-muted"><em>Even developers can't see who posted! 🔒</em></p>
+
 
     {% if session.user_id %}
       <a href="{{ url_for('add_confession') }}" class="btn btn-warning mb-3">Submit New Confession</a>
