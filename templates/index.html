@@ -25,6 +25,7 @@
       </div>
     </div>
 
+    <!-- Title and slogan -->
     <h1 class="mb-2">🏆 Who's Gonna Win? <small class="text-muted">Place your bets now!</small></h1>
     <p class="fs-5 fst-italic text-primary slogan">{{ slogan }}</p>
 
@@ -35,6 +36,8 @@
           <div class="card mb-3">
             <div class="card-body">
               <h5>{{ e.event.title }}</h5>
+              
+              <!-- Betting Form -->
               <form method="POST" action="{{ url_for('place_bet', event_id=e.event.id) }}" class="row g-2">
                   <div class="col-md-4">
                       <select name="outcome_id" class="form-select">
@@ -51,6 +54,7 @@
                   </div>
               </form>
 
+              <!-- Bets Table -->
               {% if e.bets %}
               <div class="mt-3">
                   <h6>📋 Current Bets:</h6>
@@ -77,6 +81,32 @@
               {% else %}
               <p class="text-muted mt-2">No bets placed yet for this event.</p>
               {% endif %}
+
+              <!-- Chat Preview -->
+              {% if e.chat_preview and e.chat_preview|length > 0 %}
+              <div class="mt-3">
+                  <h6>💬 Recent Discussion:</h6>
+                  <ul class="list-group list-group-flush">
+                      {% for msg in e.chat_preview %}
+                      <li class="list-group-item">
+                          <small>
+                              <strong>{{ msg.username }}</strong>
+                              {% if msg.is_admin %}
+                                  <span class="badge bg-danger">Admin</span>
+                              {% endif %}
+                              : {{ msg.message }}
+                              <span class="text-muted" style="font-size:0.8em;">({{ msg.timestamp }})</span>
+                          </small>
+                      </li>
+                      {% endfor %}
+                  </ul>
+              </div>
+              {% endif %}
+
+              <!-- Discuss Event Button -->
+              <a href="{{ url_for('event_chat', event_id=e.event.id) }}" class="btn btn-sm btn-outline-secondary mt-2">
+                  💬 Discuss Event
+              </a>
             </div>
           </div>
         {% endfor %}
@@ -110,23 +140,23 @@
   </div>
 
   <!-- RIGHT COLUMN: Confessions -->
-<div class="col-md-4">
-  <h2>🙊 Anonymous Confessions</h2>
+  <div class="col-md-4">
+    <h2>🙊 Anonymous Confessions</h2>
 
-  {% if session.user_id %}
-    <a href="{{ url_for('add_confession') }}" class="btn btn-warning mb-3">Submit New Confession</a>
-  {% else %}
-    <p class="text-muted">Log in to submit a confession.</p>
-  {% endif %}
+    {% if session.user_id %}
+      <a href="{{ url_for('add_confession') }}" class="btn btn-warning mb-3">Submit New Confession</a>
+    {% else %}
+      <p class="text-muted">Log in to submit a confession.</p>
+    {% endif %}
 
-  <div class="list-group">
-      {% for c in confessions %}
-      <div class="list-group-item">
-          <p class="mb-1">{{ c.content }}</p>
-          <small class="text-muted">{{ c.timestamp }}</small>
-      </div>
-      {% endfor %}
+    <div class="list-group">
+        {% for c in confessions %}
+        <div class="list-group-item">
+            <p class="mb-1">{{ c.content }}</p>
+            <small class="text-muted">{{ c.timestamp }}</small>
+        </div>
+        {% endfor %}
+    </div>
   </div>
-</div>
 </div>
 {% endblock %}

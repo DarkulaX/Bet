@@ -62,6 +62,16 @@ def init_db():
             content TEXT NOT NULL,
             timestamp TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS event_chat (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id INTEGER NOT NULL,
+            user_id INTEGER,
+            username TEXT,
+            message TEXT NOT NULL,
+            is_admin INTEGER DEFAULT 0,
+            timestamp TEXT NOT NULL
+        );
         """)
 
     with get_db() as db:
@@ -84,11 +94,12 @@ else:
 def index():
     db = get_db()
 
-    # Approved events
+    # Active approved events
     events = db.execute("""
         SELECT * FROM events
         WHERE winner_outcome_id IS NULL AND approved = 1
     """).fetchall()
+
     events_data = []
     for event in events:
         outcomes = db.execute("SELECT * FROM event_outcomes WHERE event_id=?", (event["id"],)).fetchall()
@@ -99,7 +110,22 @@ def index():
             JOIN event_outcomes o ON b.outcome_id = o.id
             WHERE b.event_id = ? AND b.status = 'pending'
         """, (event["id"],)).fetchall()
-        events_data.append({"event": event, "outcomes": outcomes, "bets": bets})
+
+        # Fetch last 2 chat messages for preview
+        chat_preview = db.execute("""
+            SELECT username, message, is_admin, timestamp
+            FROM event_chat
+            WHERE event_id=?
+            ORDER BY id DESC
+            LIMIT 2
+        """, (event["id"],)).fetchall()
+
+        events_data.append({
+            "event": event,
+            "outcomes": outcomes,
+            "bets": bets,
+            "chat_preview": chat_preview
+        })
 
     # Pending events
     pending_events = db.execute("""
@@ -109,14 +135,17 @@ def index():
     pending_events_data = []
     for event in pending_events:
         outcomes = db.execute("SELECT * FROM event_outcomes WHERE event_id=?", (event["id"],)).fetchall()
-        pending_events_data.append({"event": event, "outcomes": outcomes})
+        pending_events_data.append({
+            "event": event,
+            "outcomes": outcomes
+        })
 
     # Confessions
     confessions = db.execute("""
         SELECT * FROM confessions ORDER BY id DESC LIMIT 20
     """).fetchall()
 
-    # Random slogan
+    # Slogan
     slogans = [
         "Bet smart. Win big. Brag always! 😎",
         "Fortune favors the bold… and the silly. 😂",
@@ -325,6 +354,50 @@ def delete_event(event_id):
         db.commit()
     flash("Event deleted!")
     return redirect(url_for("admin_approvals"))
+
+@app.route("/event_chat/<int:event_id>", methods=["GET", "POST"])
+def event_chat(event_id):
+    db = get_db()
+    # Fetch event details
+    event = db.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
+    if not event:
+        flash("Event not found")
+        return redirect(url_for("index"))
+
+    # If POST → Add message
+    if request.method == "POST":
+        if "user_id" not in session:
+            flash("You must be logged in to post in the chat.")
+            return redirect(url_for("login"))
+
+        message = request.form.get("message", "").strip()
+        if message:
+            is_admin = 1 if session.get("is_admin") else 0
+            db.execute("""
+                INSERT INTO event_chat (event_id, user_id, username, message, is_admin, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                event_id,
+                session["user_id"],
+                session["username"],
+                message,
+                is_admin,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            ))
+            db.commit()
+            flash("Message posted.")
+        else:
+            flash("Message cannot be empty.")
+
+        return redirect(url_for("event_chat", event_id=event_id))
+
+    # Fetch chat messages for this event
+    messages = db.execute("""
+        SELECT * FROM event_chat WHERE event_id=?
+        ORDER BY id ASC
+    """, (event_id,)).fetchall()
+
+    return render_template("event_chat.html", event=event, messages=messages)
 
 @app.route("/admin_resolve/<int:event_id>", methods=["POST"])
 def admin_resolve(event_id):

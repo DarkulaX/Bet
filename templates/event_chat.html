@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>💬 Discussion for: {{ event.title }}</h2>
+
+<div class="mb-3">
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">⬅ Back to Events</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <ul class="list-group">
+            {% for m in messages %}
+            <li class="list-group-item">
+                <strong>{{ m.username }}</strong>
+                {% if m.is_admin %}
+                    <span class="badge bg-danger">Admin</span>
+                {% endif %}
+                <small class="text-muted">{{ m.timestamp }}</small>
+                <div>{{ m.message }}</div>
+            </li>
+            {% endfor %}
+            {% if messages|length == 0 %}
+                <li class="list-group-item text-muted">No messages yet. Start the discussion!</li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+
+{% if session.user_id %}
+<form method="POST" action="{{ url_for('event_chat', event_id=event.id) }}">
+    <textarea name="message" class="form-control mb-2" placeholder="Write your message..." required></textarea>
+    <button type="submit" class="btn btn-primary">Post Message</button>
+</form>
+{% else %}
+<p class="text-muted">Log in to join the discussion.</p>
+{% endif %}
+{% endblock %}
