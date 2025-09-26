@@ -517,10 +517,10 @@ def all_bets():
         query += " AND date(e.resolved_at) <= date(?)"
         params.append(date_to)
 
-    query += " ORDER BY 
+    query += """ ORDER BY 
         CASE WHEN e.resolved_at IS NULL THEN 1 ELSE 0 END,
         datetime(e.resolved_at) DESC,
-        b.id DESC"
+        b.id DESC"""
 
     bets = get_db().execute(query, params).fetchall()
 
